@@ -1,0 +1,140 @@
+-- Lua modules are typically declared using an empty table called M.
+-- All members of the module must have the M. prefix, and the M table is returned at the end of the script.
+-- N.B. If you want to reference another function in the module, you must use the M.prefix.
+
+M = {}
+
+M.Option = {id = 0, type = "free", priceDiamond = 0, text = "option", dialog = nil}
+
+function M.Option:new (id, type, price, text, dialog)
+    self.__index = self
+
+    return setmetatable({
+        id = id,
+        type = type,
+        priceDiamond = price,
+        text = text,
+        dialog = dialog,
+    }, self)
+end
+
+function M.start()
+	runblock(flowchart, "Intro") -- Runs the Intro Block on the flowchart 
+
+    laughing = "laughing"
+    sad = "sad"
+    happy = "happy"
+    
+    right = "right"
+    left = "left"
+    offscreenLeft = "offscreen left"
+    offscreenRight = "offscreen right"
+
+    free = "free"
+    premium = "premium"
+    rewarded = "rewarded"
+
+    setmenudialog(menudialog)
+
+    stage.show(johncharacter, offscreenLeft)
+    stage.show(sherlockcharacter, offscreenRight)
+end
+
+function M.playExampleScript()
+
+
+    showDialog1 = function() return M.showDialog("Dialog1", sherlockcharacter, sad, right, sad,
+    {
+        M.Option:new(0, free, 0, "showDialog2", showDialog2), 
+        M.Option:new(1, rewarded, 0, "showDialog3", showDialog3),
+        M.Option:new(2, premium, 5, "showDialog6", showDialog6)
+    }) end
+
+    showDialog2 = function() return M.showDialog("Dialog2", johncharacter, laughing, left, happy,
+    {
+        M.Option:new(3, free, 0, "showDialog4", showDialog4)
+    }) end 
+
+    showDialog3 = function() return M.showDialog("Dialog3", sherlockcharacter, laughing, right, happy,
+    {
+        M.Option:new(4, free, 0, "showDialog4", showDialog4)
+    }) end
+
+    showDialog4 = function() return M.showDialog("Dialog4", johncharacter, sad, left, sad,
+    {
+        M.Option:new(5, free, 0, "showDialog5", showDialog5)
+    }) end
+
+    showDialog5 = function() return M.showDialog("Dialog5", sherlockcharacter, sad, right, sad,
+    {
+        M.Option:new(6, free, 0, "showDialog6", showDialog6)
+    }) end
+
+    showDialog6 = function() return M.showDialog("Dialog6 The End", sherlockcharacter, laughing, right, happy) end
+
+    showDialog1()
+   end
+
+function M.showDialog(text, character, characterImage, characterPosition, characterEmotion, options)
+
+    local emotion = getvar(flowchart, "emotion")
+    emotion.value = characterEmotion
+
+    if characterPosition == left then
+        runblock(flowchart, "ShowLeftDialog")
+        positionFrom = offscreenLeft
+        hideBlock = "HideLeftDialog"
+        setEmotion = "SetLeftEmotion"
+        setsaydialog(leftsaydialog)
+    else
+        runblock(flowchart, "ShowRightDialog")
+        positionFrom = offscreenRight
+        hideBlock = "HideRightDialog"
+        setEmotion = "SetRightEmotion"
+        setsaydialog(rightsaydialog)
+    end
+
+    if (options != nil) then
+        sayoptions.fadewhendone = false
+        sayoptions.waitforinput = false
+    end
+
+    stage.show(character, characterImage, positionFrom, characterPosition)
+    wait(0.75)
+    runblock(flowchart, setEmotion)
+	say(text)
+
+    
+    if (options != nil) then
+        wait(0.5)
+        local choice = M.showMenu(options)
+
+        stage.hide(character, positionFrom)
+        runblock(flowchart, hideBlock)
+
+        options[choice].dialog()
+    else
+        sayoptions.fadewhendone = true
+        sayoptions.waitforinput = true
+    end
+end
+
+function M.showMenu(options)
+    local optionTexts = {}
+
+    for i = 1, #options, 1 do
+        optionTexts[i] = options[i].text
+
+        if(options[i].type == premium) then
+            optionTexts[i] = optionTexts[i] .. " Premium " .. options[i].priceDiamond
+        elseif(options[i].type == rewarded) then
+            optionTexts[i] = optionTexts[i] .. " rewarded"
+        end
+    end
+
+	local choice = choose (optionTexts)
+
+    return choice
+end
+
+return M
